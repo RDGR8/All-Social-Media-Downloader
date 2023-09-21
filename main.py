@@ -140,22 +140,20 @@ def YouTubeDownload(theYoutubeVideoLink : str, pathToExportYoutubeVideo, guiChec
 
     #Creating the final video
     guiProgressBarText.configure(text ="Getting the Final Video")
-    videoWithSound.write_videofile(pathToExportYoutubeVideo + '\\' + randomNumber + youtubeVideo.title + '.mp4', bitrate= bit_rate, verbose= False, logger = None)
+    videoWithSound.write_videofile(pathToExportYoutubeVideo + '\\' + youtubeVideo.title + '.mp4', bitrate= bit_rate, verbose= False, logger = None)
     guiProgressBar.set(1)
     guiProgressBarText.configure(text = "Finished!")
 
     #deleting variables so at the end the program would be able to delete files that are not needed anymore
     videoWithoutSound.close()
     videoWithSound.close()
-    del youtubeAudioAbsloutePath
     os.remove(youtubeVideoAbsloutePath)
     os.remove(youtubeAudioAbsloutePath)
 
-    #path = (fr'{pathToExportYoutubeVideo}\{youtubeVideo.title}.mp4')
 
     #Open the final video file in windows explorer
     if guiCheckbox1 == True:
-        subprocess.run(f'explorer /select,"{pathToExportYoutubeVideo}/{youtubeVideo.title}.mp4"')
+        subprocess.run(f'explorer /select,"{pathToExportYoutubeVideo}\{youtubeVideo.title}.mp4"')
 
 
 
