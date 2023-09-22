@@ -120,15 +120,17 @@ def InstagramDownload(instaLink, outputLocation, guiCheckbox1):
     cl = Client()
     outputLocation = (pathlib.Path(outputLocation).absolute())
     instaInfo = str(cl.media_info(cl.media_pk_from_url(instaLink)))
+    print (instaInfo)
+    print (instaInfo.split())
 
     if 'media_type=2' in instaInfo:
         guiProgressBarText.configure(text="Downloading Instagram Video", text_color= 'black')
-        cl.video_download(cl.media_pk_from_url(instaLink), outputLocation)
+        cl.video_download(cl.media_pk_from_url(instaLink), fileName='eee', folder=outputLocation)
 
 
     elif 'media_type=1' in instaInfo:
         guiProgressBarText.configure(text="Downloading Instagram Photo", text_color= 'black')
-        cl.photo_download(cl.media_pk_from_url(instaLink), outputLocation)
+        cl.photo_download(cl.media_pk_from_url(instaLink), folder=outputLocation)
     #if guiCheckbox1 == True:
     #    subprocess.run(f'explorer /select,"{outputLocation}/{youtubeVideo.title}.mp4"')
 
