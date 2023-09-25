@@ -3,6 +3,7 @@ import subprocess
 import os
 import ffmpeg
 import moviepy.video.io.ffmpeg_tools
+import yt_dlp
 from pytube import YouTube
 import random
 from moviepy.editor import *
@@ -18,6 +19,7 @@ from moviepy.video.io.ffmpeg_tools import ffmpeg_extract_subclip
 from instagrapi import Client
 from instagrapi.types import StoryMention, StoryMedia, StoryLink, StoryHashtag
 
+forbiddenWindowsChractrs = ['\\', '/', ':', '*', '?', '"', '<', '>', '|']
 result = []
 result2 = []
 result3= []
@@ -39,13 +41,7 @@ def browse_button():
     guiOutputLocationEntry.insert(0, guiExportPath)
 
 
-def downloadYoutubeVideo(url: str, exportPath : str):
-    guiProgressBar.set(0.05)
-    guiProgressBarText.configure(text ="Downloading YouTube Video")
-    YouTube(url).streams.filter(adaptive=True, file_extension= 'mp4').order_by('resolution').last().download(exportPath, filename=randomNumber + '.mp4')
-    guiProgressBar.set(0.1)
-    guiProgressBarText.configure(text ="Downloading YouTube Audio")
-    YouTube(url).streams.filter(file_extension= 'mp4').last().download(exportPath, filename=randomNumber + '_audio.mp4')
+
 def extractAudio(pathToVideo : str):
     guiProgressBar.set(0.15)
     guiProgressBarText.configure(text ="Converting Youtube Audio to a Usable Type")
@@ -58,82 +54,59 @@ def openFileLocation(yesOrNo : bool, fileLocation):
         subprocess.run(f'explorer /select,"{fileLocation}"')
 
 
-def YouTubeDownload(theYoutubeVideoLink : str, pathToExportYoutubeVideo, guiCheckbox1):
+def YouTubeDownload(theYoutubeVideoLink, pathToExportYoutubeVideo, guiCheckbox1):
 
+    subprocess.run(fr'yt-dlp.exe {theYoutubeVideoLink} --output {pathToExportYoutubeVideo}\%(title)s.%(ext)s')
+    proc=subprocess.run(fr'yt-dlp.exe {theYoutubeVideoLink} --output {pathToExportYoutubeVideo}\%(title)s.%(ext)s --get-filename', stdout=subprocess.PIPE, encoding='utf-16', universal_newlines=True)
 
-    #Getting a full path to the export location
-    pathToExportYoutubeVideo = str(pathlib.Path(pathToExportYoutubeVideo).absolute())
+    print((proc.stdout))
 
-    #Downloading the YouTube Video and Audio
-    guiProgressBar.set(0.05)
-    guiProgressBarText.configure(text ="Downloading YouTube Video", text_color= 'white')
-    YouTube(theYoutubeVideoLink).streams.filter(adaptive=True, file_extension= 'mp4').order_by('resolution').last().download(pathToExportYoutubeVideo, filename=randomNumber + '.mp4')
-    guiProgressBar.set(0.1)
-    guiProgressBarText.configure(text ="Downloading YouTube Audio")
-    YouTube(theYoutubeVideoLink).streams.filter(file_extension= 'mp4').last().download(pathToExportYoutubeVideo, filename=randomNumber + '_audio.mp4')
+    #print((((str(proc.stdout))[2:-3])))
+    #print((str((proc.stdout))[2:-3])).replace(fr'\\', '\\')
+    openFileLocation(guiCheckbox1, (((str(proc.stdout))[2:-3])).replace(fr'\\', '\\'))
 
-    #Defining youtubeVideo for the usage of youtubeVideo.title and for refrencing paths
-    youtubeVideo = YouTube(theYoutubeVideoLink)
-    youtubeVideoAbsloutePath = (pathToExportYoutubeVideo+'\\'+randomNumber+'.mp4')
-    youtubeAudioAbsloutePath = (pathToExportYoutubeVideo+'\\'+randomNumber+'_audio.mp4')
-
-
-    #extractAudio(youtubeAudioAbsloutePath)
-    #Extracting the mp3 file from the mp4 audio file (yes, an mp4 audio file)
-    guiProgressBar.set(0.15)
-    guiProgressBarText.configure(text ="Converting Youtube Audio to a Usable Type", text_color= 'black')
-    audio = AudioFileClip(youtubeAudioAbsloutePath)
-    audio.write_audiofile(pathToExportYoutubeVideo + '\\' +randomNumber+ ".mp3" , logger = None)
-    audio.close()
-
-    os.remove(youtubeAudioAbsloutePath)
-    youtubeAudioAbsloutePath = (pathToExportYoutubeVideo+'\\'+randomNumber+'.mp3')
-
-    guiProgressBar.set(0.70)
-    videoWithoutSound = VideoFileClip(youtubeVideoAbsloutePath)
-    videoWithSound = videoWithoutSound.set_audio(AudioFileClip(youtubeAudioAbsloutePath))
-
-    #Getting the bitrate of the originial video
-    bit_rate =str(int((os.path.getsize(youtubeVideoAbsloutePath)/1000000)/((videoWithoutSound.duration/60)*0.0075))*1000)
-    #bit_rate = str(bit_rate*1000)
-
-    #Creating the final video
-    guiProgressBarText.configure(text ="Getting the Final Video")
-    videoWithSound.write_videofile(pathToExportYoutubeVideo + '\\' + youtubeVideo.title + '.mp4', bitrate= bit_rate, verbose= False, logger = None)
-    guiProgressBar.set(1)
-    guiProgressBarText.configure(text = "Finished!")
-
-    #deleting variables so at the end the program would be able to delete files that are not needed anymore
-    videoWithoutSound.close()
-    videoWithSound.close()
-    os.remove(youtubeVideoAbsloutePath)
-    os.remove(youtubeAudioAbsloutePath)
-
-    #path = (fr'{pathToExportYoutubeVideo}\{youtubeVideo.title}.mp4')
-
-    #Open the final video file in windows explorer
-    openFileLocation(guiCheckbox1, (f'{pathToExportYoutubeVideo}/{youtubeVideo.title}.mp4'))
-    #if guiCheckbox1 == True:
-    #    subprocess.run(f'explorer /select,"{pathToExportYoutubeVideo}/{youtubeVideo.title}.mp4"')
+    #subprocess.run('yt-dlp.exe', cwd=cu)
 
 def InstagramDownload(instaLink, outputLocation, guiCheckbox1):
     cl = Client()
     outputLocation = (pathlib.Path(outputLocation).absolute())
-    instaInfo = str(cl.media_info(cl.media_pk_from_url(instaLink)))
-    print (instaInfo)
-    print (instaInfo.split())
+    mediaPk = int(cl.media_pk_from_url(instaLink))
+    mediaType = int(cl.media_info(str(mediaPk)).media_type)
+    instaFormat = str(cl.media_info(str(mediaPk)).video_url)
+    outputLocation = str(outputLocation)
+    instaTitle = (cl.media_info(str(mediaPk)).caption_text).replace('\n', ' ')
+    for i in range(len(forbiddenWindowsChractrs)):
+        instaTitle = instaTitle.replace(forbiddenWindowsChractrs[i], ' ')
 
-    if 'media_type=2' in instaInfo:
-        guiProgressBarText.configure(text="Downloading Instagram Video", text_color= 'black')
-        cl.video_download(cl.media_pk_from_url(instaLink), fileName='eee', folder=outputLocation)
+    if len(instaTitle) > 210:
+        instaTitle = instaTitle[:210]
+    if mediaType == 2:
+        guiProgressBarText.configure(text="Downloading Instagram Video", text_color= 'white')
+        cl.video_download(mediaPk, fileName=instaTitle, folder=outputLocation)
+        openFileLocation(guiCheckbox1, outputLocation + '\\' + instaTitle + '.mp4')
+       # if '.mp4' in instaFormat:
+        #    openFileLocation(guiCheckbox1, outputLocation + '\\' + instaTitle +'.mp4')
+        #elif '.mov' in instaFormat:
+         #   openFileLocation(guiCheckbox1, outputLocation + '\\' + instaTitle +'.mov')
+        #elif '.gif' in instaFormat:
+         #   openFileLocation(guiCheckbox1, outputLocation + '\\' + instaTitle +'.gif')
 
 
-    elif 'media_type=1' in instaInfo:
-        guiProgressBarText.configure(text="Downloading Instagram Photo", text_color= 'black')
-        cl.photo_download(cl.media_pk_from_url(instaLink), folder=outputLocation)
-    #if guiCheckbox1 == True:
-    #    subprocess.run(f'explorer /select,"{outputLocation}/{youtubeVideo.title}.mp4"')
-
+    elif mediaType == 1:
+        guiProgressBarText.configure(text="Downloading Instagram Photo", text_color= 'white')
+        cl.photo_download(mediaPk, fileName= instaTitle ,folder=outputLocation)
+        openFileLocation(guiCheckbox1, outputLocation + '\\' + instaTitle + '.webp')
+      #  if '.jpeg' in instaFormat:
+       #     openFileLocation(guiCheckbox1, outputLocation + '\\' + instaTitle +'.jpeg')
+        #elif '.webp' in instaFormat:
+         #   openFileLocation(guiCheckbox1, outputLocation + '\\' + instaTitle +'.webp')
+          #  print(outputLocation + '\\' + instaTitle +'.webp')
+        #elif '.png' in instaFormat:
+         #   openFileLocation(guiCheckbox1, outputLocation + '\\' + instaTitle + '.png')
+        #elif '.bmp' in instaFormat:
+         #   openFileLocation(guiCheckbox1, outputLocation + '\\' + instaTitle +'.bmp')
+        #elif '.gif' in instaFormat:
+         #   openFileLocation(guiCheckbox1, outputLocation + '\\' + instaTitle +'.gif')
 
 def guiStart():
     if 'youtube.com/' in (guiLinkEntry.get()) or  'youtu.be/' in (guiLinkEntry.get()):
