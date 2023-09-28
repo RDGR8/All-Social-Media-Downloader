@@ -20,15 +20,11 @@ from instagrapi import Client
 from instagrapi.types import StoryMention, StoryMedia, StoryLink, StoryHashtag
 
 forbiddenWindowsChractrs = ['\\', '/', ':', '*', '?', '"', '<', '>', '|']
-result = []
-result2 = []
-result3= []
 guiExportPath = ('')
 guiVideoLink = ('')
 guiOutputLocation = ('')
 guiCheckbox = False
 
-randomNumber = str(random.randint(10000000,99999999))
 #Defining functions
 
 
@@ -56,25 +52,19 @@ def openFileLocation(yesOrNo : bool, fileLocation):
 
 def YouTubeDownload(theYoutubeVideoLink, pathToExportYoutubeVideo, guiCheckbox1):
 
-    subprocess.run(fr'yt-dlp.exe {theYoutubeVideoLink} --output {pathToExportYoutubeVideo}\%(title)s.%(ext)s')
-    proc=subprocess.run(fr'yt-dlp.exe {theYoutubeVideoLink} --output {pathToExportYoutubeVideo}\%(title)s.%(ext)s --get-filename', stdout=subprocess.PIPE, encoding='utf-16', universal_newlines=True)
+    with yt_dlp.YoutubeDL({'outtmpl': fr'{pathToExportYoutubeVideo}\%(title)s.%(ext)s'}) as ydl:
+        ydl.download([theYoutubeVideoLink])
+        filename = ydl.prepare_filename(ydl.extract_info(theYoutubeVideoLink, download=False))
 
-    print((proc.stdout))
-
-    #print((((str(proc.stdout))[2:-3])))
-    #print((str((proc.stdout))[2:-3])).replace(fr'\\', '\\')
-    openFileLocation(guiCheckbox1, (((str(proc.stdout))[2:-3])).replace(fr'\\', '\\'))
-
-    #subprocess.run('yt-dlp.exe', cwd=cu)
+    openFileLocation(guiCheckbox1, filename)
 
 def InstagramDownload(instaLink, outputLocation, guiCheckbox1):
     cl = Client()
-    outputLocation = (pathlib.Path(outputLocation).absolute())
+    outputLocation = str(pathlib.Path(outputLocation).absolute())
     mediaPk = int(cl.media_pk_from_url(instaLink))
-    mediaType = int(cl.media_info(str(mediaPk)).media_type)
-    instaFormat = str(cl.media_info(str(mediaPk)).video_url)
-    outputLocation = str(outputLocation)
-    instaTitle = (cl.media_info(str(mediaPk)).caption_text).replace('\n', ' ')
+    info = cl.media_info(str(mediaPk))
+    mediaType = int(info.media_type)
+    instaTitle = (info.caption_text).replace('\n', ' ')
     for i in range(len(forbiddenWindowsChractrs)):
         instaTitle = instaTitle.replace(forbiddenWindowsChractrs[i], ' ')
 
@@ -84,29 +74,13 @@ def InstagramDownload(instaLink, outputLocation, guiCheckbox1):
         guiProgressBarText.configure(text="Downloading Instagram Video", text_color= 'white')
         cl.video_download(mediaPk, fileName=instaTitle, folder=outputLocation)
         openFileLocation(guiCheckbox1, outputLocation + '\\' + instaTitle + '.mp4')
-       # if '.mp4' in instaFormat:
-        #    openFileLocation(guiCheckbox1, outputLocation + '\\' + instaTitle +'.mp4')
-        #elif '.mov' in instaFormat:
-         #   openFileLocation(guiCheckbox1, outputLocation + '\\' + instaTitle +'.mov')
-        #elif '.gif' in instaFormat:
-         #   openFileLocation(guiCheckbox1, outputLocation + '\\' + instaTitle +'.gif')
+
 
 
     elif mediaType == 1:
         guiProgressBarText.configure(text="Downloading Instagram Photo", text_color= 'white')
         cl.photo_download(mediaPk, fileName= instaTitle ,folder=outputLocation)
         openFileLocation(guiCheckbox1, outputLocation + '\\' + instaTitle + '.webp')
-      #  if '.jpeg' in instaFormat:
-       #     openFileLocation(guiCheckbox1, outputLocation + '\\' + instaTitle +'.jpeg')
-        #elif '.webp' in instaFormat:
-         #   openFileLocation(guiCheckbox1, outputLocation + '\\' + instaTitle +'.webp')
-          #  print(outputLocation + '\\' + instaTitle +'.webp')
-        #elif '.png' in instaFormat:
-         #   openFileLocation(guiCheckbox1, outputLocation + '\\' + instaTitle + '.png')
-        #elif '.bmp' in instaFormat:
-         #   openFileLocation(guiCheckbox1, outputLocation + '\\' + instaTitle +'.bmp')
-        #elif '.gif' in instaFormat:
-         #   openFileLocation(guiCheckbox1, outputLocation + '\\' + instaTitle +'.gif')
 
 def guiStart():
     if 'youtube.com/' in (guiLinkEntry.get()) or  'youtu.be/' in (guiLinkEntry.get()):
