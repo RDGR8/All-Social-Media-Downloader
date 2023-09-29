@@ -1,23 +1,18 @@
 import pathlib
 import subprocess
 import os
-import ffmpeg
-import moviepy.video.io.ffmpeg_tools
 import yt_dlp
-from pytube import YouTube
-import random
 from moviepy.editor import *
-import shlex
-import json
 import customtkinter
 from tkinter import filedialog
 from tkinter import *
 import tkinter
 from tkinter.ttk import *
 from threading import Thread
-from moviepy.video.io.ffmpeg_tools import ffmpeg_extract_subclip
 from instagrapi import Client
 from instagrapi.types import StoryMention, StoryMedia, StoryLink, StoryHashtag
+from win32comext.shell import shell, shellcon
+import pythoncom
 
 forbiddenWindowsChractrs = ['\\', '/', ':', '*', '?', '"', '<', '>', '|']
 guiExportPath = ('')
@@ -26,6 +21,8 @@ guiOutputLocation = ('')
 guiCheckbox = False
 
 #Defining functions
+
+pythoncom.CoInitialize()
 
 
 def browse_button():
@@ -38,23 +35,37 @@ def browse_button():
 
 
 
-def extractAudio(pathToVideo : str):
-    guiProgressBar.set(0.15)
-    guiProgressBarText.configure(text ="Converting Youtube Audio to a Usable Type")
-    audio = AudioFileClip(pathToVideo)
-    audio.write_audiofile((str(pathlib.Path(pathToVideo).absolute().parent))+'\\'+randomNumber+".mp3", logger = None)
-    audio.close()
+
 
 def openFileLocation(yesOrNo : bool, fileLocation):
     if yesOrNo == True:
-        subprocess.run(f'explorer /select,"{fileLocation}"')
+        parentFileLocation = os.path.dirname(fileLocation)
+        fileLocation = os.path.basename(fileLocation)
+
+
+        path = parentFileLocation.replace('/', '\\')
+        files = [fileLocation]
+        folder_pidl = shell.SHILCreateFromPath(path, 0)[0]
+        desktop = shell.SHGetDesktopFolder()
+        shell_folder = desktop.BindToObject(folder_pidl, None, shell.IID_IShellFolder)
+        name_to_item_mapping = dict(
+            [(desktop.GetDisplayNameOf(item, shellcon.SHGDN_FORPARSING | shellcon.SHGDN_INFOLDER), item) for item in
+             shell_folder])
+        to_show = []
+        for file in files:
+            if file in name_to_item_mapping:
+                to_show.append(name_to_item_mapping[file])
+            # else:
+            # raise Exception('File: "%s" not found in "%s"' % (file, path))
+
+        shell.SHOpenFolderAndSelectItems(folder_pidl, to_show, 0)
 
 
 def YouTubeDownload(theYoutubeVideoLink, pathToExportYoutubeVideo, guiCheckbox1):
 
     with yt_dlp.YoutubeDL({'outtmpl': fr'{pathToExportYoutubeVideo}\%(title)s.%(ext)s'}) as ydl:
-        ydl.download([theYoutubeVideoLink])
-        filename = ydl.prepare_filename(ydl.extract_info(theYoutubeVideoLink, download=False))
+        #ydl.download([theYoutubeVideoLink])
+        filename = ydl.prepare_filename(ydl.extract_info(theYoutubeVideoLink, download=True))
 
     openFileLocation(guiCheckbox1, filename)
 
@@ -84,10 +95,10 @@ def InstagramDownload(instaLink, outputLocation, guiCheckbox1):
 
 def guiStart():
     if 'youtube.com/' in (guiLinkEntry.get()) or  'youtu.be/' in (guiLinkEntry.get()):
-        t = Thread(target=YouTubeDownload, args=(str(guiLinkEntry.get()), str(guiOutputLocationEntry.get()), bool(checkBox.get())), daemon=True)
+        t = Thread(target=YouTubeDownload, args=(str(guiLinkEntry.get()), str(guiOutputLocationEntry.get().replace('/', '\\')), bool(checkBox.get())), daemon=True)
         t.start()
     elif 'instagram.com/' in (guiLinkEntry.get()):
-        t = Thread(target=InstagramDownload, args=(str(guiLinkEntry.get()), str(guiOutputLocationEntry.get()), bool(checkBox.get())), daemon=True)
+        t = Thread(target=InstagramDownload, args=(str(guiLinkEntry.get()), str(guiOutputLocationEntry.get().replace('/', '\\')), bool(checkBox.get())), daemon=True)
         t.start()
     else:
         guiProgressBarText.configure(text="Invalid Link", text_color= 'red')
