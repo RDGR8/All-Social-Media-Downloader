@@ -1,16 +1,11 @@
 import pathlib
-import subprocess
-import os
 import yt_dlp
 from moviepy.editor import *
 import customtkinter
 from tkinter import filedialog
 from tkinter import *
-import tkinter
-from tkinter.ttk import *
 from threading import Thread
 from instagrapi import Client
-from instagrapi.types import StoryMention, StoryMedia, StoryLink, StoryHashtag
 from win32comext.shell import shell, shellcon
 import pythoncom
 
@@ -39,12 +34,9 @@ def browse_button():
 
 def openFileLocation(yesOrNo : bool, fileLocation):
     if yesOrNo == True:
-        parentFileLocation = os.path.dirname(fileLocation)
-        fileLocation = os.path.basename(fileLocation)
 
-
-        path = parentFileLocation.replace('/', '\\')
-        files = [fileLocation]
+        path = os.path.dirname(fileLocation).replace('/', '\\')
+        files = [os.path.basename(fileLocation)]
         folder_pidl = shell.SHILCreateFromPath(path, 0)[0]
         desktop = shell.SHGetDesktopFolder()
         shell_folder = desktop.BindToObject(folder_pidl, None, shell.IID_IShellFolder)
@@ -61,10 +53,16 @@ def openFileLocation(yesOrNo : bool, fileLocation):
         shell.SHOpenFolderAndSelectItems(folder_pidl, to_show, 0)
 
 
-def YouTubeDownload(theYoutubeVideoLink, pathToExportYoutubeVideo, guiCheckbox1):
 
-    with yt_dlp.YoutubeDL({'outtmpl': fr'{pathToExportYoutubeVideo}\%(title)s.%(ext)s'}) as ydl:
-        #ydl.download([theYoutubeVideoLink])
+def my_hook(d):
+    if d['status'] == 'finished':
+        guiProgressBarText.configure(text="Done Downloading\n"+os.path.basename(d['filename']), text_color='white')
+    if d['status'] == 'downloading':
+        guiProgressBarText.configure(text=d['_speed_str']+'\nETA '+d['_eta_str'], text_color='white')
+        guiProgressBar.set((float(d['_percent_str'].replace('%', '')))/100)
+
+def YouTubeDownload(theYoutubeVideoLink, pathToExportYoutubeVideo, guiCheckbox1):
+    with yt_dlp.YoutubeDL({'outtmpl': fr'{pathToExportYoutubeVideo}\%(title)s.%(ext)s', 'progress_hooks' : [my_hook]}) as ydl:
         filename = ydl.prepare_filename(ydl.extract_info(theYoutubeVideoLink, download=True))
 
     openFileLocation(guiCheckbox1, filename)
@@ -141,7 +139,7 @@ guiProgressBar =  customtkinter.CTkProgressBar(master= frame, orientation= HORIZ
 guiProgressBar.set(0)
 guiProgressBar.pack(pady=5, padx=10)
 
-guiProgressBarText = customtkinter.CTkLabel(master= frame, text ="", font=("Arial", 15))
+guiProgressBarText = customtkinter.CTkLabel(master= frame, text ="", font=("Arial", 13), wraplength=530)
 guiProgressBarText.pack(pady = 12, padx=10)
 
 
